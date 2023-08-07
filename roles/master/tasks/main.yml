@@ -1,0 +1,5 @@
+- name: Ensure net.bridge.bridge-nf-call-iptables is set. See kubeadm
+  copy: src=nomad.hcl owner=root group=root dest=/etc/nomad.d/nomad.hcl
+
+- name: enable nomad service
+  service: name=nomad state=started enabled=yes

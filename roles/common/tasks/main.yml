@@ -1,0 +1,121 @@
+- name: build hosts file
+  lineinfile: dest=/etc/hosts regexp='.*{{ item }}$' line="{{ hostvars[item].ansible_eth0.ipv4.address }} {{item}}" state=present
+  when: hostvars[item].ansible_eth0.ipv4.address is defined
+  with_items: "{{ groups['all'] }}"
+
+- name: disable selinux
+  selinux: state=disabled
+
+- name: disable of selinux - now
+  command: setenforce 0
+
+- name: Add Kubernetes yum repo
+  yum_repository:
+    name: kubernetes
+    description: Kubernetes kubeadm
+    baseurl: https://packages.cloud.google.com/yum/repos/kubernetes-el7-x86_64
+    gpgkey: https://packages.cloud.google.com/yum/doc/yum-key.gpg
+    gpgcheck: yes
+
+- name: install utility programs
+  dnf: name={{ packages }} state=present disable_gpg_check=yes
+  vars:
+    packages:
+      - etcd
+      - wget
+      - ntpsec
+      - screen
+      - vim
+      - iptables
+      - iptables-utils
+      - iptables-services
+      - ncurses-term
+      - kernel-devel
+      - kernel-headers
+      - dnf-plugins-core
+      - jq
+      - lvm2
+      - device-mapper-persistent-data
+      - dnf-plugins-core
+
+
+- name: install nomad repo
+  command: dnf config-manager --add-repo https://rpm.releases.hashicorp.com/fedora/hashicorp.repo
+
+- name: remove all old docker
+  dnf: name={{ packages }} state=removed disable_gpg_check=yes
+  vars:
+    packages:
+      - docker
+      - docker-client
+      - docker-client-latest
+      - docker-common
+      - docker-latest
+      - docker-latest-logrotate
+      - docker-logrotate
+      - docker-engine
+      - docker-selinux
+      - docker-engine-selinux
+      - docker-engine
+
+- name: install docker ce repo
+  command: dnf config-manager --add-repo https://download.docker.com/linux/fedora/docker-ce.repo
+
+- name: install docker ce and nomad
+  dnf: name={{ packages }} state=present disable_gpg_check=yes
+  vars:
+    packages:
+      - docker-ce
+      - docker-ce-cli
+      - containerd.io
+      - nomad
+
+- name: enable docker services
+  service: name={{ item }} state=started enabled=yes
+  with_items:
+    - docker
+    - ntpd
+
+- name: turn off swap
+  command: swapoff -a
+
+- name: remove swap from /etc/fstab
+  lineinfile:
+    path: /etc/fstab
+    state: absent
+    regexp: "swap"
+
+- name: set tunables
+  shell: echo 1 | sudo tee /proc/sys/net/bridge/bridge-nf-call-{{ item }}
+  with_items:
+    - arptables
+    - ip6tables
+    - iptables
+
+- name: get cni plugins
+  get_url:
+    url: https://github.com/containernetworking/plugins/releases/download/v1.3.0/cni-plugins-linux-amd64-v1.3.0.tgz
+    dest: /home/vagrant/cni-plugins.tar.gz
+
+- name: make dir /opt/cni
+  file:
+    path: /opt/cni/bin
+    state: directory
+
+- name: install cni plugins
+  unarchive:
+    src: /home/vagrant/cni-plugins.tar.gz
+    remote_src: yes
+    dest: /opt/cni/bin
+
+- name: allow ports
+  command: firewall-cmd --permanent --zone=public --add-port={{ item }}/tcp
+  with_items:
+    - 4646
+    - 4647
+    - 4648
+
+- name: reload firewall
+  command: firewall-cmd --reload
+
+
