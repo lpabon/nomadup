@@ -26,7 +26,7 @@ HOSTIP = Socket.ip_address_list.reject( &:ipv4_loopback? ).reject( &:ipv6_loopba
 
 Vagrant.configure("2") do |config|
     config.ssh.insert_key = false
-    config.vm.box = "generic/fedora37"
+    config.vm.box = "generic/rocky8"
 
     # Override
     config.vm.provider :libvirt do |v,override|

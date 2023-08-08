@@ -13,3 +13,13 @@ client {
     retry_join = ["lpabon-nomad-master"]
   }
 }
+
+plugin "docker" {
+  config {
+    allow_privileged = true
+    volumes {
+      enabled      = true
+    }
+  }
+}
+

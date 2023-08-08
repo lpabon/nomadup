@@ -21,9 +21,7 @@
   dnf: name={{ packages }} state=present disable_gpg_check=yes
   vars:
     packages:
-      - etcd
       - wget
-      - ntpsec
       - screen
       - vim
       - iptables
@@ -37,10 +35,11 @@
       - lvm2
       - device-mapper-persistent-data
       - dnf-plugins-core
+      - epel-release
 
 
 - name: install nomad repo
-  command: dnf config-manager --add-repo https://rpm.releases.hashicorp.com/fedora/hashicorp.repo
+  command: dnf config-manager --add-repo https://rpm.releases.hashicorp.com/RHEL/hashicorp.repo
 
 - name: remove all old docker
   dnf: name={{ packages }} state=removed disable_gpg_check=yes
@@ -59,7 +58,7 @@
       - docker-engine
 
 - name: install docker ce repo
-  command: dnf config-manager --add-repo https://download.docker.com/linux/fedora/docker-ce.repo
+  command: dnf config-manager --add-repo https://download.docker.com/linux/centos/docker-ce.repo
 
 - name: install docker ce and nomad
   dnf: name={{ packages }} state=present disable_gpg_check=yes
@@ -71,10 +70,7 @@
       - nomad
 
 - name: enable docker services
-  service: name={{ item }} state=started enabled=yes
-  with_items:
-    - docker
-    - ntpd
+  ansible.builtin.systemd: name=docker state=started enabled=true
 
 - name: turn off swap
   command: swapoff -a
