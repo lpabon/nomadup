@@ -38,24 +38,8 @@
       - epel-release
 
 
-- name: install nomad repo
+- name: install hashicorp repo
   command: dnf config-manager --add-repo https://rpm.releases.hashicorp.com/RHEL/hashicorp.repo
-
-- name: remove all old docker
-  dnf: name={{ packages }} state=removed disable_gpg_check=yes
-  vars:
-    packages:
-      - docker
-      - docker-client
-      - docker-client-latest
-      - docker-common
-      - docker-latest
-      - docker-latest-logrotate
-      - docker-logrotate
-      - docker-engine
-      - docker-selinux
-      - docker-engine-selinux
-      - docker-engine
 
 - name: install docker ce repo
   command: dnf config-manager --add-repo https://download.docker.com/linux/centos/docker-ce.repo
@@ -68,6 +52,10 @@
       - docker-ce-cli
       - containerd.io
       - nomad
+      - consul
+
+- name: remove bug in systemd file for consul
+  lineinfile: dest=/usr/lib/systemd/system/consul.service regexp="^Type=notify" state=absent
 
 - name: enable docker services
   ansible.builtin.systemd: name=docker state=started enabled=true
@@ -105,13 +93,24 @@
     dest: /opt/cni/bin
 
 - name: allow ports
-  command: firewall-cmd --permanent --zone=public --add-port={{ item }}/tcp
+  command: firewall-cmd --permanent --zone=public --add-port={{ item }}
   with_items:
-    - 4646
-    - 4647
-    - 4648
+    - 4646/tcp
+    - 4647/tcp
+    - 4648/tcp
+    - 8300/tcp
+    - 8301/tcp
+    - 8301/udp
+    - 8302/tcp
+    - 8302/udp
+    - 8400/tcp
+    - 8500/tcp
+    - 8600/tcp
+    - 8600/udp
 
 - name: reload firewall
   command: firewall-cmd --reload
 
+- name: set up consul bind_addr
+  lineinfile: dest=/etc/consul.d/consul.hcl regexp="^#bind_addr" line="bind_addr = \"{{ ansible_eth0.ipv4.address }}\"" state=present
 

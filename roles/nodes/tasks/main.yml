@@ -1,5 +1,11 @@
 - name: Ensure net.bridge.bridge-nf-call-iptables is set. See kubeadm
   copy: src=nomad.hcl owner=root group=root dest=/etc/nomad.d/nomad.hcl
 
-- name: enable nomad service
-  service: name=nomad state=started enabled=yes
+- name: connect to master consul
+  lineinfile: dest=/etc/consul.d/consul.hcl regexp="^retry_join" line="retry_join = [\"{{ hostvars[groups['master'][0]].ansible_eth0.ipv4.address }}\"]" state=present
+
+- name: enable services service
+  service: name={{ item }} state=started enabled=yes
+  with_items:
+    - nomad
+    - consul

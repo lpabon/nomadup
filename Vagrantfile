@@ -67,6 +67,7 @@ Vagrant.configure("2") do |config|
                   end
 
               if i == (NODES-1)
+                  groups["master"] = ["#{prefix}-master"]
                   groups["#{clusterName}-master"] = ["#{prefix}-master"]
                   groups["#{clusterName}-nodes"] = (0..NODES-1).map {|j| "#{prefix}-node#{j}"}
                   groups["#{clusterName}-master:vars"] = { "kubeup_host_ip" => HOSTIP , "kubeup_clustername" => clusterName }
